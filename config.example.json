@@ -1,0 +1,6 @@
+{
+	"accessToken": "(optional) Spotify access token",
+	"refreshToken": "(optional) Spotify refresh token",
+	"clientId": "Spotify Application Client ID",
+	"clientSecret": "Spotify Application Client Secret"
+}

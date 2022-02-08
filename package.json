@@ -1,0 +1,16 @@
+{
+  "name": "spotify-vrchat",
+  "version": "1.0.0",
+  "description": "Displays currently playing song on Spotify as VRChat status",
+  "main": "spotify-vrchat.js",
+  "scripts": {
+    "test": "echo \\\"Error: no test specified\\\" && exit 1"
+  },
+  "author": "MissingNO123",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "express": "^4.17.2",
+    "spotify-web-api-node": "^5.0.2",
+    "vrchat": "^1.6.9"
+  }
+}

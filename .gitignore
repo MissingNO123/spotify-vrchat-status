@@ -1,3 +1,8 @@
+# Don't Peek My Config
+config.json
+
+package-lock.json
+
 # Logs
 logs
 *.log
