@@ -78,6 +78,7 @@ function updateSpotPlayingStatus() {
 }
 
 // Create mini webapp to handle generating Spotify access tokens
+// TODO: Save authentication token so don't have to login each time
 const app = express();
 
 app.get("/login", (req, res) => {
@@ -107,7 +108,7 @@ app.get("/callback", (req, res) => {
 
       console.log( `Sucessfully retreived access token. Expires in ${expires_in} s.` );
 
-      res.send("Success! You can now close the window. <script>Window.close();</script>");
+      res.send("Success! You can now close the window.");
 
       isSpotified = true;
       eventEmitter.emit("spotify_ready");
@@ -154,6 +155,7 @@ function passwordEntry(query) {
 }
 
 // Handle authenticating with VRChat API
+// TODO: Save authentication cookie so don't have to login each time
 const VRCLoginFlow = async function() {
 let VRCUsername = await prompt("VRC Username: ");
 let VRCPassword = await passwordEntry("VRC Password: ");
