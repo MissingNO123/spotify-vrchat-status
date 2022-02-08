@@ -6,6 +6,7 @@ Uses [spotify-web-api-node](https://github.com/thelinmichael/spotify-web-api-nod
 ## Prerequesites
 - Install [Node.js](https://nodejs.org)
 - Create an application on [Spotify's Developer Page](https://developer.spotify.com/dashboard/applications)
+- Add `http://localhost:8888/callback` to the callback URL whitelist
 - Take note of the Client ID and Secret for your application
 
 ## Installation
