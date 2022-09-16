@@ -5,7 +5,7 @@ There is also an OSC version, which shows your now playing status in your chatbo
 Uses [spotify-web-api-node](https://github.com/thelinmichael/spotify-web-api-node) and [vrchatapi-javascript](https://github.com/vrchatapi/vrchatapi-javascript).
 The OSC version only uses spotify-web-api-node.
 
-## Prerequesites
+## Prerequisites
 - Install [Node.js](https://nodejs.org)
 - Create an application on [Spotify's Developer Page](https://developer.spotify.com/dashboard/applications)
 - Add `http://localhost:8888/callback` to the callback URL whitelist
