@@ -1,29 +1,51 @@
 const SpotifyWebApi = require("spotify-web-api-node");
 const express = require("express");
 const readline = require("readline");
-const vrchat = require("vrchat");
 const EventEmitter = require("events");
 const eventEmitter = new EventEmitter();
+const osc = require('osc');
 
 const config = require("./config.json");
 
-const scopes = [
-  "user-read-playback-state",
-  "user-read-currently-playing",
-];
+// change these to whatever you have set for vrchat
+const vrcInPort = 9000
+const vrcOutPort = 9001
+const ipAddress = '127.0.0.1';
+
+// Create an osc.js UDP Port.
+var vrcOscUdpPort = new osc.UDPPort({
+  localAddress: ipAddress,
+  localPort: vrcOutPort,
+  metadata: true
+});
+
+// Open the osc socket.
+vrcOscUdpPort.open();
 
 var isSpotified = false;
-var isVRChat = false; 
+var isOSCPorted = false;
+
+// wait for udp port to be ready before using it
+vrcOscUdpPort.on("ready", function () {
+  isOSCPorted = true;
+  console.log("Connected to OSC UDP at " + ipAddress + " on port " + vrcOutPort);
+  //send typing indicator
+  vrcOscUdpPort.send({
+    address: "/chatbox/typing",
+    args: [
+        {
+            type: "i",
+            value: 1
+        }
+    ]
+  }, ipAddress, vrcInPort);
+});
 
 const spotifyApi = new SpotifyWebApi({
   redirectUri: "http://localhost:8888/callback",
   clientId: config.clientId,
   clientSecret: config.clientSecret
 });
-
-let VRCCurrentUser;
-let AuthenticationApi;
-let UsersApi;
 
 // Refresh Spotify's tokens
 function refreshToken() {
@@ -46,40 +68,54 @@ function refreshToken() {
   );
 }
 
-// Update current playing song from Spotify, set it as VRC status
-let lastPlayStr = "";
+// Update current playing song from Spotify, set it as chatbox text
 function updateSpotPlayingStatus() {
   if (!isSpotified) return;
-  if (!isVRChat) return;
-  if (UsersApi == undefined) return;
+  if (!isOSCPorted) return;
   // Get the User's Currently Playing Track 
   spotifyApi.getMyCurrentPlayingTrack()
     .then(function (data) {
       if (data.body.item == null || data.body.item == undefined) { return; } // Nothing playing yet
-      let artists = [];
+
+      let nameFilter = /[\u0081-\uFFFF]/g; 
+      let songName = data.body.item.name.replace(nameFilter, "?"); //chatbox only supports ASCII for now 
+      let playPaused = data.body.is_playing == true ? "[>]Listening to: " : "[||]Paused: ";
+      let artistArr = [];
+      for (a in data.body.item.artists) artistArr.push(data.body.item.artists[a].name);
+      let artistNames = artistArr.join(", ");
+
+      let progBarLength = 26;
+      let progScaled = Math.floor(data.body.progress_ms / data.body.item.duration_ms * progBarLength);
+      // [============O============]
+      let progStr = "[" .padEnd(progScaled, '=') + 'O' .padEnd(progBarLength-progScaled - (progScaled==0), '=') + ']';
+
       try {
-        for (a in data.body.item.artists) artists.push(data.body.item.artists[a].name);
-        let playStr = data.body.item.name + "-" + artists.join(", "); // Comma separate list
-        if (playStr !== lastPlayStr) { // Don't update again if the same
-          console.log("Now playing: " + playStr);
-          let statusStr = playStr;
-          if (playStr.length > 30) { statusStr = playStr.slice(0,28) + "..."; } // Truncate if too long
-          UsersApi.updateUser(VRCCurrentUser.id, {"statusDescription": ">"+statusStr});
-          lastPlayStr = playStr;
-        }
+        let playStr = `${playPaused} ${songName} by ${artistNames} `; 
+        let statusStr = playStr;
+        if (playStr.length > 115) { statusStr = playStr.slice(0,111) + "..."; } // Truncate if too long 
+        playStr = playStr + progStr;
+        console.log(playStr);
+        setChatBox(playStr);
       } catch (e) {
         console.log("Could not update playing status: " + e);
       }
-    }, function (err) {
+    }, 
+    function (err) {
       console.log("updateSpotify: Something went wrong!", err);
       isSpotified = false;
       refreshToken();
+      //require('child_process').exec('start http://localhost:8888/login');
     });
 }
 
 // Create mini webapp to handle generating Spotify access tokens
 // TODO: Save authentication token so don't have to login each time
 const app = express();
+
+const scopes = [
+  "user-read-playback-state",
+  "user-read-currently-playing",
+];
 
 app.get("/login", (req, res) => {
   res.redirect(spotifyApi.createAuthorizeURL(scopes));
@@ -121,85 +157,37 @@ app.get("/callback", (req, res) => {
     });
 });
 
-// Prompts for input, Python style
-function prompt(query) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise(resolve => rl.question(query, ans => {
-    
-    rl.close();
-    resolve(ans);
-  }))
+function setChatBox(string) {
+  vrcOscUdpPort.send({
+      address: "/chatbox/input",
+      args: [
+          {
+              type: "s",
+              value: string
+          },
+          {
+              type: "i",
+              value: 1
+          }
+      ]
+  }, ipAddress, vrcInPort);
 }
 
-// Prompts for input but masks it
-function passwordEntry(query) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  rl._writeToOutput(query);
-  rl._writeToOutput = function _writeToOutput(stringToWrite) { rl.output.write("*"); }
-
-  return new Promise(resolve => {
-    rl.question(query, ans => {
-      rl.history = rl.history.slice(1);
-      rl.close();
-      resolve(ans);
-    });
-  });
-}
-
-// Handle authenticating with VRChat API
-// TODO: Save authentication cookie so don't have to login each time
-const VRCLoginFlow = async function() {
-let VRCUsername = await prompt("VRC Username: ");
-let VRCPassword = await passwordEntry("VRC Password: ");
-const configuration = new vrchat.Configuration({
-  username: VRCUsername,
-  password: VRCPassword
-});
-  AuthenticationApi = new vrchat.AuthenticationApi(configuration);
-  UsersApi = new vrchat.UsersApi(configuration);
-  AuthenticationApi.getCurrentUser().then(async resp => {
-    if (resp.data.requiresTwoFactorAuth != undefined) {  
-      let twoFactorAuthCode = await prompt("Enter 2FA: ");
-      await AuthenticationApi.verify2FA( {'code': twoFactorAuthCode} ).then(async resp2 => { // weird hack to get vrchat module to work properly, sending a string gives HTTP 400
-        await AuthenticationApi.getCurrentUser().then(async resp3 => {VRCCurrentUser = resp3.data;});
-      });
-    } else {
-      VRCCurrentUser = resp.data;
-    }
-    console.log(`Logged in as: ${VRCCurrentUser.username}`);
-    isVRChat = true;
-    eventEmitter.emit("vrchat_ready");
-  });
-}
-
-// Wait until both Spotify and VRC are ready
-async function waitForBothReady() {
+// Wait until Spotify is ready
+async function WaitForReady() {
   await new Promise(resolve => eventEmitter.once('spotify_ready', resolve));
   console.log("Spotify is ready");
-  await new Promise(resolve => eventEmitter.once('vrchat_ready', resolve));
-  console.log("VRC is ready");
   eventEmitter.emit('ready');
 }
-waitForBothReady();
+WaitForReady();
 
 // Start the webapp server for Spotify tokens
 app.listen(8888, () => {
   require('child_process').exec('start http://localhost:8888/login'); // sorry
 });
 
-// Wait a bit so Spotify can ready up first, then start login process for VRC
-setTimeout(VRCLoginFlow, 2e3);
-
 eventEmitter.once("ready", () => {
   console.log("Everything is ready!");
   updateSpotPlayingStatus();
-  setInterval(updateSpotPlayingStatus, 10e3);
+  setInterval(updateSpotPlayingStatus, 5e3);
 })

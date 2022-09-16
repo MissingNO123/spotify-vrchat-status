@@ -10,6 +10,7 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "express": "^4.17.2",
+    "osc": "^2.4.3",
     "spotify-web-api-node": "^5.0.2",
     "vrchat": "^1.6.9"
   }
