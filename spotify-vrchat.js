@@ -29,15 +29,13 @@ let UsersApi;
 function refreshToken() {
   spotifyApi.refreshAccessToken()
     .then(data => {
-      const access_token = data.body["access_token"];
-      const refresh_token = data.body["refresh_token"];
       const expires_in = data.body["expires_in"];
-      spotifyApi.setAccessToken(access_token);
-      spotifyApi.setRefreshToken(refresh_token);
+      spotifyApi.setAccessToken(data.body["access_token"]);
       isSpotified = true;
       eventEmitter.emit("spotify_ready");
-      console.log( `Refreshed Spotify token. It now expires in ${expires_in} seconds!` );
-      setTimeout(refreshToken, data.body["expires_in"] / 2e3);
+      console.log( `Refreshed Spotify access token. It now expires in ${expires_in} seconds!` );
+      setTimeout(refreshToken, (expires_in / 2) * 1000);
+      isSpotified = true;
     },
     function (err) {
       console.log("Could not refresh the Spotify token!", err.message);
@@ -71,7 +69,7 @@ function updateSpotPlayingStatus() {
         console.log("Could not update playing status: " + e);
       }
     }, function (err) {
-      console.log("updateSpotify: Something went wrong!", err);
+      console.log("updateSpotPlayingStatus: Something went wrong!", err);
       isSpotified = false;
       refreshToken();
     });
@@ -113,7 +111,7 @@ app.get("/callback", (req, res) => {
       isSpotified = true;
       eventEmitter.emit("spotify_ready");
 
-      setTimeout(refreshToken, expires_in / 2 * 1000);
+      setTimeout(refreshToken, (expires_in / 2) * 1000);
     })
     .catch(error => {
       console.error("Error getting Tokens:", error);
