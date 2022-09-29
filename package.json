@@ -4,7 +4,8 @@
   "description": "Displays currently playing song on Spotify as VRChat status",
   "main": "spotify-vrchat.js",
   "scripts": {
-    "test": "echo \\\"Error: no test specified\\\" && exit 1"
+    "start": "node spotify-vrchat.js",
+    "osc": "node spotify-vrchat-osc.js"
   },
   "author": "MissingNO123",
   "license": "GPL-3.0-or-later",
