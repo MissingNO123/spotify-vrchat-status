@@ -20,21 +20,21 @@ The OSC version only uses spotify-web-api-node.
 
 ## Usage
 ```bash
-npm start
+npm run start
 ```
-- It will open a browser window to generate the auth tokens for Spotify
+- The program will open a browser window to generate the auth tokens for Spotify
   - If it fails, open http://localhost:8888/login manually
 - Log in with your VRChat username and password (and 2FA, if necessary)
 - Play something on Spotify
 
 ## Usage (OSC)
 ```bash
-node spotify-vrchat-osc.js
+npm run osc
 ```
-- It will open a browser window to generate the auth tokens for Spotify
+- Make sure OSC is enabled in VRChat (Radial Menu > Options > OSC > Enabled)
+- The program will open a browser window to generate the auth tokens for Spotify
   - If it fails, open http://localhost:8888/login manually
 - Play something on Spotify
-- Make sure OSC is enabled in VRChat (Radial Menu > Options > OSC > Enabled)
 - While using the OSC version, it is not required to log in to VRChat
 
 ## Disclaimer
@@ -43,8 +43,10 @@ VRChat does not officially support use of their API outside of the VRChat client
 so using this tool could get your account suspended without warning at any time. 
 While the program tries not to access either API excessively, 
 there's no guarantee that this won't be deemed excessive by VRChat's moderators in the future.
-If you are concerned about this, just use the OSC version, as it only sends the data to people in your instance.
-Use at your own risk.
+
+If you are concerned about this, just use the OSC version, as it does not use the API and only sends data to people in your instance through the VRChat application.
+
+Either way, use this at your own risk.
 
 This is the official statement from Tupper, VRChat's community manager:
 
