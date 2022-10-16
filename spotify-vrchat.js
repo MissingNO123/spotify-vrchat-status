@@ -57,7 +57,7 @@ function updateSpotPlayingStatus() {
       let artists = [];
       try {
         for (a in data.body.item.artists) artists.push(data.body.item.artists[a].name);
-        let playStr = data.body.item.name + "-" + artists.join(", "); // Comma separate list
+        let playStr = `${data.body.item.name}-${artists.join(", ")}`; // Comma separate list
         if (playStr !== lastPlayStr) { // Don't update again if the same
           console.log("Now playing: " + playStr);
           let statusStr = playStr;

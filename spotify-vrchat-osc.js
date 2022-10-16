@@ -77,7 +77,7 @@ function updateSpotPlayingStatus() {
 
       let nameFilter = /[\u0081-\uFFFF]/g; 
       let songName = data.body.item.name.replace(nameFilter, "?"); //chatbox only supports ASCII for now 
-      let playPaused = data.body.is_playing == true ? "[>]Listening to: " : "[||]Paused: ";
+      let playPaused = data.body.is_playing == true ? "[>] " : "[||] ";
       let artistArr = [];
       for (a in data.body.item.artists) artistArr.push(data.body.item.artists[a].name);
       let artistNames = artistArr.join(", ");
@@ -88,12 +88,12 @@ function updateSpotPlayingStatus() {
       let progStr = "[" .padEnd(progScaled, '=') + 'O' .padEnd(progBarLength-progScaled - (progScaled==0), '=') + ']';
 
       try {
-        let playStr = `${playPaused} ${songName} by ${artistNames} `; 
+        let playStr = `${playPaused} '${songName}' by '${artistNames}' `; 
         let statusStr = playStr;
         if (playStr.length > 115) { statusStr = playStr.slice(0,111) + "..."; } // Truncate if too long 
-        playStr = playStr + progStr;
-        console.log(playStr);
-        setChatBox(playStr);
+        statusStr = playStr + progStr;
+        console.log(statusStr);
+        setChatBox(statusStr);
       } catch (e) {
         console.log("Could not update playing status: " + e);
       }
