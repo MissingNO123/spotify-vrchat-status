@@ -1,7 +1,7 @@
 {
   "name": "spotify-vrchat",
   "version": "1.0.0",
-  "description": "Displays currently playing song on Spotify as VRChat status",
+  "description": "Displays song currently playing on Spotify in VRChat",
   "main": "spotify-vrchat.js",
   "scripts": {
     "start": "node spotify-vrchat.js",
