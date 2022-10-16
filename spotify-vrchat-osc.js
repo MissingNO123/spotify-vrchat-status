@@ -92,7 +92,7 @@ function updateSpotPlayingStatus() {
         let statusStr = playStr;
         if (playStr.length > 115) { statusStr = playStr.slice(0,111) + "..."; } // Truncate if too long 
         statusStr = playStr + progStr;
-        console.log(statusStr);
+        // console.log(statusStr);
         setChatBox(statusStr);
       } catch (e) {
         console.log("Could not update playing status: " + e);
