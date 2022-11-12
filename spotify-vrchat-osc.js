@@ -10,26 +10,30 @@ const config = require("./config.json");
 // change these to whatever you have set for vrchat
 const vrcInPort = 9000
 const vrcOutPort = 9001
-const ipAddress = '127.0.0.1';
+const localAddress = 'localhost';  // Your PC's IP address, if not using Quest this should be 127.0.0.1
+const remoteAddress = '127.0.0.1'; // Your Quest's IP address, if not using Quest leave this as 127.0.0.1
+const localPort = 11037;
+
+var isSpotified = false;
+var isOSCPorted = false;
+
+var lastPlayStr = "";
 
 // Create an osc.js UDP Port.
 var vrcOscUdpPort = new osc.UDPPort({
-  localAddress: ipAddress,
-  localPort: vrcOutPort,
-  metadata: true
+  localAddress: localAddress,
+  localPort: localPort, 
+  metadata: false
 });
 
 // Open the osc socket.
 vrcOscUdpPort.open();
 
-var isSpotified = false;
-var isOSCPorted = false;
-
 // wait for udp port to be ready before using it
 vrcOscUdpPort.on("ready", function () {
   isOSCPorted = true;
-  console.log("Connected to OSC UDP at " + ipAddress + " on port " + vrcOutPort);
-  //send typing indicator
+  console.log("Connected to OSC UDP at " + localAddress + " on port " + localPort);
+  // Send typing indicator
   vrcOscUdpPort.send({
     address: "/chatbox/typing",
     args: [
@@ -38,7 +42,7 @@ vrcOscUdpPort.on("ready", function () {
             value: 1
         }
     ]
-  }, ipAddress, vrcInPort);
+  }, localAddress, vrcInPort);
 });
 
 const spotifyApi = new SpotifyWebApi({
@@ -75,8 +79,9 @@ function updateSpotPlayingStatus() {
     .then(function (data) {
       if (data.body.item == null || data.body.item == undefined) { return; } // Nothing playing yet
 
-      let nameFilter = /[\u0081-\uFFFF]/g; 
-      let songName = data.body.item.name.replace(nameFilter, "?"); //chatbox only supports ASCII for now 
+      //let nameFilter = /[\u0081-\uFFFF]/g; 
+      //let songName = data.body.item.name.replace(nameFilter, "?"); //chatbox (used to) only support ASCII 
+      let songName = data.body.item.name;
       let playPaused = data.body.is_playing == true ? "[>] " : "[||] ";
       let artistArr = [];
       for (a in data.body.item.artists) artistArr.push(data.body.item.artists[a].name);
@@ -90,10 +95,14 @@ function updateSpotPlayingStatus() {
       try {
         let playStr = `${playPaused} '${songName}' by '${artistNames}' `; 
         let statusStr = playStr;
-        if (playStr.length > 115) { statusStr = playStr.slice(0,111) + "..."; } // Truncate if too long 
-        statusStr = playStr + progStr;
-        // console.log(statusStr);
-        setChatBox(statusStr);
+        if (statusStr.length > 115) { statusStr = statusStr.slice(0,110) + "... "; } // Truncate if too long 
+        statusStr += progStr;
+        statusStr.toString()
+        //console.log(statusStr);
+        if (statusStr !== lastPlayStr) {
+          setChatBox(toUTF8(statusStr));
+          lastPlayStr = statusStr;
+        }
       } catch (e) {
         console.log("Could not update playing status: " + e);
       }
@@ -105,7 +114,7 @@ function updateSpotPlayingStatus() {
     });
 }
 
-// Create mini webapp to handle generating Spotify access tokens
+// Creates a mini webapp to handle generating Spotify access tokens
 // TODO: Save authentication token so don't have to login each time
 const app = express();
 
@@ -152,20 +161,28 @@ app.get("/callback", (req, res) => {
     });
 });
 
+// Chatbox supports UTF-8 now!
+function toUTF8(str) {return Buffer.from(str, "utf-8").toString();}
+
+// Chatbox setter helper function
 function setChatBox(string) {
   vrcOscUdpPort.send({
       address: "/chatbox/input",
       args: [
           {
-              type: "s",
+              type: "s", // chatbox text itself
               value: string
           },
           {
-              type: "i",
+              type: "i", // don't open keyboard (post straight to chatbox)
               value: 1
-          }
+          },
+          {
+            type: "b", // don't play notification sound
+            value: new Uint8Array([0x00]) // I HATE VRCHAT
+          },
       ]
-  }, ipAddress, vrcInPort);
+  }, localAddress, vrcInPort);
 }
 
 // Wait until Spotify is ready
@@ -181,8 +198,9 @@ app.listen(8888, () => {
   require('child_process').exec('start http://localhost:8888/login'); // sorry
 });
 
+// Begin update loop once everything is ready
 eventEmitter.once("ready", () => {
   console.log("Everything is ready!");
   updateSpotPlayingStatus();
-  setInterval(updateSpotPlayingStatus, 5e3);
+  setInterval(updateSpotPlayingStatus, 2e3);
 })
