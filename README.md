@@ -1,3 +1,5 @@
+# **Due to recent changes to the VRChat API, requests must now be properly identified. Until I update the repo to fix this, I'd consider only using the OSC version for now.**
+
 # Spotify Now Playing Status for VRChat
 
 Sets your status on VRChat to the name and artist of the currently playing song on Spotify.
