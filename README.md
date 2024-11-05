@@ -1,4 +1,5 @@
-# **Due to recent changes to the VRChat API, requests must now be properly identified. Until I update the repo to fix this, I'd consider only using the OSC version for now.**
+# **This project is no longer being actively maintained, as it is superceded by many much better alternatives that are easier to set up.**
+On top of that, the presence of constantly visible chatbox messages displaying info is generally looked down upon. For those who still want to use this, the repository will remain here.
 
 # Spotify Now Playing Status for VRChat
 
