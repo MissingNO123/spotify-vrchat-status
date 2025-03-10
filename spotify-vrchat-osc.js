@@ -90,9 +90,9 @@ function updateSpotPlayingStatus() {
       for (a in data.body.item.artists) artistArr.push(data.body.item.artists[a].name);
       let artistNames = artistArr.join(", ");
 
-      let progBarLength = 20;
-      if (data.body.item.duration_ms > 10 * 60 * 1000) { progBarLength = 18; } // make bar smaller if song is longer than 10 minutes
-      if (data.body.item.duration_ms > 60 * 60 * 1000) { progBarLength = 14; } // make bar even smaller if song is longer than 1 hour
+      let progBarLength = 19;
+      if (data.body.item.duration_ms > 10 * 60 * 1000) { progBarLength = 17; } // make bar smaller if song is longer than 10 minutes
+      if (data.body.item.duration_ms > 60 * 60 * 1000) { progBarLength = 13; } // make bar even smaller if song is longer than 1 hour
       let progScaled = Math.floor(data.body.progress_ms / data.body.item.duration_ms * progBarLength);
       // [============O‒‒‒‒‒‒‒‒‒‒‒‒]
       let progBar = "[" .padEnd(progScaled, '=') + 'O' .padEnd(progBarLength-progScaled - (progScaled==0), '–') + ']';
