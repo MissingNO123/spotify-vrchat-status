@@ -19,6 +19,8 @@ var isOSCPorted = false;
 
 var lastPlayStr = "";
 
+var tokens = loadTokens();
+
 // Create an osc.js UDP Port.
 var vrcOscUdpPort = new osc.UDPPort({
   localAddress: localAddress,
@@ -32,7 +34,8 @@ vrcOscUdpPort.open();
 // wait for udp port to be ready before using it
 vrcOscUdpPort.on("ready", function () {
   isOSCPorted = true;
-  console.log("Connected to OSC UDP at " + localAddress + " on port " + localPort);
+  console.log(`Connected to OSC UDP at ${localAddress}:${localPort}`);
+  console.log(`Sending message to ${remoteAddress}:${vrcInPort}`);
   // Send typing indicator
   vrcOscUdpPort.send({
     address: "/chatbox/typing",
@@ -87,16 +90,20 @@ function updateSpotPlayingStatus() {
       for (a in data.body.item.artists) artistArr.push(data.body.item.artists[a].name);
       let artistNames = artistArr.join(", ");
 
-      let progBarLength = 26;
+      let progBarLength = 19;
+      if (data.body.item.duration_ms > 1 * 60 * 60 * 1000) { progBarLength = 17; } // make bar smaller if song is longer than 1 hour
       let progScaled = Math.floor(data.body.progress_ms / data.body.item.duration_ms * progBarLength);
-      // [============O============]
-      let progStr = "[" .padEnd(progScaled, '=') + 'O' .padEnd(progBarLength-progScaled - (progScaled==0), '=') + ']';
+      // [============O‒‒‒‒‒‒‒‒‒‒‒‒]
+      let progBar = "[" .padEnd(progScaled, '=') + 'O' .padEnd(progBarLength-progScaled - (progScaled==0), '‒') + ']';
+      // 0:00[============O‒‒‒‒‒‒‒‒‒‒‒‒]5:36
+      let progStr = `${convertMsToTimeHMS(data.body.progress_ms)}${progBar}${convertMsToTimeHMS(data.body.item.duration_ms)}`
+
 
       try {
-        let playStr = `${playPaused} '${songName}' by '${artistNames}' `; 
+        let playStr = `${playPaused} ${songName}\nby ${artistNames}`; 
         let statusStr = playStr;
         if (statusStr.length > 115) { statusStr = statusStr.slice(0,110) + "... "; } // Truncate if too long 
-        statusStr += progStr;
+        statusStr += '\n' + progStr;
         statusStr.toString()
         //console.log(statusStr);
         if (statusStr !== lastPlayStr) {
@@ -115,7 +122,6 @@ function updateSpotPlayingStatus() {
 }
 
 // Creates a mini webapp to handle generating Spotify access tokens
-// TODO: Save authentication token so don't have to login each time
 const app = express();
 
 const scopes = [
@@ -146,6 +152,8 @@ app.get("/callback", (req, res) => {
       spotifyApi.setAccessToken(data.body["access_token"]);
       spotifyApi.setRefreshToken(data.body["refresh_token"]);
 
+      saveTokens(data.body["access_token"], data.body["refresh_token"]);
+
       console.log( `Sucessfully retreived access token. Expires in ${expires_in} seconds.` );
 
       res.send("Success! You can now close the window. ");
@@ -165,24 +173,52 @@ app.get("/callback", (req, res) => {
 function toUTF8(str) {return Buffer.from(str, "utf-8").toString();}
 
 // Chatbox setter helper function
-function setChatBox(string) {
+function setChatBox(message) {
   vrcOscUdpPort.send({
       address: "/chatbox/input",
       args: [
           {
               type: "s", // chatbox text itself
-              value: string
+              value: message
           },
           {
               type: "i", // don't open keyboard (post straight to chatbox)
               value: 1
           },
           {
-            type: "b", // don't play notification sound
-            value: new Uint8Array([0x00]) // I HATE VRCHAT
+            type: "i", // don't play notification sound
+            value: 0
           },
       ]
   }, localAddress, vrcInPort);
+}
+
+function saveTokens(access_token, refresh_token) {
+  const fs = require('fs');
+  let data = {access_token: access_token, refresh_token: refresh_token};
+  fs.writeFileSync('tokens.json', JSON.stringify(data));
+}
+
+function loadTokens() {
+  const fs = require('fs');
+  if (!fs.existsSync('tokens.json')) {
+    return {access_token: null, refresh_token: null};
+  }
+  let data = fs.readFileSync('tokens.json');
+  return JSON.parse(data);
+}
+
+function convertMsToTimeHMS(ms) {
+  let seconds = Math.floor(ms / 1000);
+  let hours = Math.floor(seconds / 3600);
+  seconds %= 3600;
+  let minutes = Math.floor(seconds / 60);
+  seconds %= 60;
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
 }
 
 // Wait until Spotify is ready
@@ -195,12 +231,19 @@ WaitForReady();
 
 // Start the webapp server for Spotify tokens
 app.listen(8888, () => {
-  require('child_process').exec('start http://localhost:8888/login'); // sorry
+  console.log(`Web server is listening on port 8888`);
+  if (tokens.access_token && tokens.refresh_token) {
+    spotifyApi.setAccessToken(tokens.access_token);
+    spotifyApi.setRefreshToken(tokens.refresh_token);
+    refreshToken();
+  } else {
+    console.log(`No tokens found, open http://localhost:8888/login in your browser to authenticate`);
+    }
 });
 
 // Begin update loop once everything is ready
 eventEmitter.once("ready", () => {
   console.log("Everything is ready!");
   updateSpotPlayingStatus();
-  setInterval(updateSpotPlayingStatus, 2e3);
+  setInterval(updateSpotPlayingStatus, 2.5e3);
 })
