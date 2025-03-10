@@ -82,13 +82,9 @@ function updateSpotPlayingStatus() {
     .then(function (data) {
       if (data.body.item == null || data.body.item == undefined) { return; } // Nothing playing yet
 
-      //let nameFilter = /[\u0081-\uFFFF]/g; 
-      //let songName = data.body.item.name.replace(nameFilter, "?"); //chatbox (used to) only support ASCII 
       let songName = data.body.item.name;
-      let playPaused = data.body.is_playing == true ? "[>] " : "[||] ";
-      let artistArr = [];
-      for (a in data.body.item.artists) artistArr.push(data.body.item.artists[a].name);
-      let artistNames = artistArr.join(", ");
+      let playPaused = data.body.is_playing == true ? "[▷] " : "[||] ";
+      let artistNames = data.body.item.artists.map(a => a.name).join(", ");
 
       let progBarLength = 19;
       if (data.body.item.duration_ms > 10 * 60 * 1000) { progBarLength = 17; } // make bar smaller if song is longer than 10 minutes
@@ -103,10 +99,9 @@ function updateSpotPlayingStatus() {
       try {
         let playStr = `${playPaused} ${songName}\nby ${artistNames}`; 
         let statusStr = playStr;
-        if (statusStr.length > 115) { statusStr = statusStr.slice(0,110) + "... "; } // Truncate if too long 
+        if (statusStr.length > 115) { statusStr = statusStr.slice(0,110) + "..."; } // Truncate if too long 
         statusStr += '\n' + progStr;
         statusStr.toString()
-        //console.log(statusStr);
         if (statusStr !== lastPlayStr) {
           setChatBox(toUTF8(statusStr));
           lastPlayStr = statusStr;
